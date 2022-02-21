@@ -31,6 +31,7 @@ import com.nextcloud.java.util.Optional
 import com.owncloud.android.datamodel.FileDataStorageManager
 import com.owncloud.android.lib.resources.status.OCCapability
 import com.owncloud.android.ui.activity.BaseActivity
+import com.owncloud.android.utils.theme.CapabilityUtils
 
 /**
  * Session mixin collects all account / user handling logic currently
@@ -67,7 +68,7 @@ class SessionMixin constructor(
         currentAccount?.let {
             val storageManager = FileDataStorageManager(getUser().get(), contentResolver)
             this.storageManager = storageManager
-            this.capabilities = storageManager.getCapability(it.name)
+            this.capabilities = CapabilityUtils.getCapability(it, activity)
         }
     }
 
