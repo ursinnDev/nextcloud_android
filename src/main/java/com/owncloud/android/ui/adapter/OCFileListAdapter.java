@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicReference;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -564,21 +565,24 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         } else {
             if (file.getRemoteId() != null && file.isPreviewAvailable()) {
                 // Thumbnail in cache?
-                Bitmap thumbnail = ThumbnailsCacheManager.getBitmapFromDiskCache(
-                    ThumbnailsCacheManager.PREFIX_THUMBNAIL + file.getRemoteId()
-                );
+                AtomicReference<Bitmap> thumbnail = new AtomicReference<>();
 
-                if (thumbnail != null && !file.isUpdateThumbnailNeeded()) {
+                new Thread(() -> {
+                    thumbnail.set(ThumbnailsCacheManager.getBitmapFromDiskCache(
+                        ThumbnailsCacheManager.PREFIX_THUMBNAIL + file.getRemoteId()));
+                }).start();
+
+                if (thumbnail.get() != null && !file.isUpdateThumbnailNeeded()) {
                     stopShimmer(shimmerThumbnail, thumbnailView);
 
                     if (MimeTypeUtil.isVideo(file)) {
-                        Bitmap withOverlay = ThumbnailsCacheManager.addVideoOverlay(thumbnail);
+                        Bitmap withOverlay = ThumbnailsCacheManager.addVideoOverlay(thumbnail.get());
                         thumbnailView.setImageBitmap(withOverlay);
                     } else {
                         if (gridView) {
-                            BitmapUtils.setRoundedBitmapForGridMode(thumbnail, thumbnailView);
+                            BitmapUtils.setRoundedBitmapForGridMode(thumbnail.get(), thumbnailView);
                         } else {
-                            BitmapUtils.setRoundedBitmap(thumbnail, thumbnailView);
+                            BitmapUtils.setRoundedBitmap(thumbnail.get(), thumbnailView);
                         }
                     }
                 } else {
@@ -591,7 +595,7 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                                                                    user,
                                                                                    asyncTasks,
                                                                                    gridView);
-                            if (thumbnail == null) {
+                            if (thumbnail.get() == null) {
                                 Drawable drawable = MimeTypeUtil.getFileTypeIcon(file.getMimeType(),
                                                                                  file.getFileName(),
                                                                                  user,
@@ -602,11 +606,11 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                                                            null);
                                 }
                                 int px = ThumbnailsCacheManager.getThumbnailDimension();
-                                thumbnail = BitmapUtils.drawableToBitmap(drawable, px, px);
+                                thumbnail.set(BitmapUtils.drawableToBitmap(drawable, px, px));
                             }
                             final ThumbnailsCacheManager.AsyncThumbnailDrawable asyncDrawable =
                                 new ThumbnailsCacheManager.AsyncThumbnailDrawable(context.getResources(),
-                                                                                  thumbnail, task);
+                                                                                  thumbnail.get(), task);
 
                             if (shimmerThumbnail != null && shimmerThumbnail.getVisibility() == View.GONE) {
                                 if (gridView) {

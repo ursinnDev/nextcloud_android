@@ -94,6 +94,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -494,16 +495,22 @@ public final class DisplayUtils {
             ((View) callContext).setContentDescription(String.valueOf(user.toPlatformAccount().hashCode()));
         }
 
-        ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProvider(context.getContentResolver());
-
         final String accountName = user.getAccountName();
         String serverName = accountName.substring(accountName.lastIndexOf('@') + 1);
-        String eTag = arbitraryDataProvider.getValue(userId + "@" + serverName, ThumbnailsCacheManager.AVATAR);
-        String avatarKey = "a_" + userId + "_" + serverName + "_" + eTag;
 
         // first show old one
-        Drawable avatar = BitmapUtils.bitmapToCircularBitmapDrawable(resources,
-                                                                     ThumbnailsCacheManager.getBitmapFromDiskCache(avatarKey));
+        AtomicReference<Bitmap> bitmap = new AtomicReference<>();
+
+        new Thread(() -> {
+            ArbitraryDataProvider arbitraryDataProvider = new ArbitraryDataProvider(context.getContentResolver());
+
+            String eTag = arbitraryDataProvider.getValue(userId + "@" + serverName, ThumbnailsCacheManager.AVATAR);
+            String avatarKey = "a_" + userId + "_" + serverName + "_" + eTag;
+
+            bitmap.set(ThumbnailsCacheManager.getBitmapFromDiskCache(avatarKey));
+        }).start();
+
+        Drawable avatar = BitmapUtils.bitmapToCircularBitmapDrawable(resources, bitmap.get());
 
         // if no one exists, show colored icon with initial char
         if (avatar == null) {
