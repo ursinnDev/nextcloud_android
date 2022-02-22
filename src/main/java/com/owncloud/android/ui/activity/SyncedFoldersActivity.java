@@ -521,8 +521,9 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
         if (itemId == android.R.id.home) {
             finish();
         } else if (itemId == R.id.action_create_custom_folder) {
-            Log.d(TAG, "Show custom folder dialog");
-            SyncedFolderDisplayItem emptyCustomFolder = new SyncedFolderDisplayItem(
+            if (PermissionUtil.checkExternalStoragePermission(this)) {
+                Log.d(TAG, "Show custom folder dialog");
+                SyncedFolderDisplayItem emptyCustomFolder = new SyncedFolderDisplayItem(
                     UNPERSISTED_ID,
                     null,
                     null,
@@ -538,7 +539,10 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
                     null,
                     MediaFolderType.CUSTOM,
                     false);
-            onSyncFolderSettingsClick(0, emptyCustomFolder);
+                onSyncFolderSettingsClick(0, emptyCustomFolder);
+            } else {
+                PermissionUtil.requestExternalStoragePermission(this, true);
+            }
 
             result = super.onOptionsItemSelected(item);
         } else {
@@ -614,14 +618,16 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == SyncedFolderPreferencesDialogFragment.REQUEST_CODE__SELECT_REMOTE_FOLDER
-                && resultCode == RESULT_OK && syncedFolderPreferencesDialogFragment != null) {
+            && resultCode == RESULT_OK && syncedFolderPreferencesDialogFragment != null) {
             OCFile chosenFolder = data.getParcelableExtra(FolderPickerActivity.EXTRA_FOLDER);
             syncedFolderPreferencesDialogFragment.setRemoteFolderSummary(chosenFolder.getRemotePath());
         }
         if (requestCode == SyncedFolderPreferencesDialogFragment.REQUEST_CODE__SELECT_LOCAL_FOLDER
-                && resultCode == RESULT_OK && syncedFolderPreferencesDialogFragment != null) {
+            && resultCode == RESULT_OK && syncedFolderPreferencesDialogFragment != null) {
             String localPath = data.getStringExtra(UploadFilesActivity.EXTRA_CHOSEN_FILES);
             syncedFolderPreferencesDialogFragment.setLocalFolderSummary(localPath);
+        } else if (requestCode == PermissionUtil.REQUEST_CODE_MANAGE_ALL_FILES) {
+            PermissionUtil.requestExternalStoragePermission(this, true); // will do nothing if already allowed
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -763,27 +769,29 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
                                            @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case PermissionUtil.PERMISSIONS_EXTERNAL_STORAGE: {
-                // If request is cancelled, result arrays are empty.
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted
-                    int gridWidth = getResources().getInteger(R.integer.media_grid_width);
-                    load(gridWidth * 2, true);
-                } else {
-                    // permission denied --> do nothing
-                    return;
-                }
-                return;
+        if (requestCode == PermissionUtil.PERMISSIONS_EXTERNAL_STORAGE) {// If request is cancelled, result arrays are empty.
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // permission was granted
+                int gridWidth = getResources().getInteger(R.integer.media_grid_width);
+                load(gridWidth * 2, true);
+            } else {
+                // permission denied --> request again. It's needed here.
+                PermissionUtil.requestExternalStoragePermission(this, true);
             }
-            default:
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+    }
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        PermissionUtil.requestExternalStoragePermission(this, true);
     }
 
     private void showBatteryOptimizationInfo() {
