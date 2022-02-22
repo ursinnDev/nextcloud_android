@@ -83,4 +83,8 @@ public final class CapabilityUtils {
 
         return capability;
     }
+
+    public static void updateCapability(OCCapability capability) {
+        cachedCapabilities.put(capability.getAccountName(), capability);
+    }
 }
