@@ -54,8 +54,10 @@ class SessionMixin constructor(
         private set
     var storageManager: FileDataStorageManager? = null
         private set
-    var capabilities: OCCapability? = null
-        private set
+    val capabilities: OCCapability?
+        get() = getUser()
+            .map { CapabilityUtils.getCapability(it, activity) }
+            .orElse(null)
 
     fun setAccount(account: Account?) {
         val validAccount = account != null && accountManager.setCurrentOwnCloudAccount(account.name)
@@ -68,7 +70,6 @@ class SessionMixin constructor(
         currentAccount?.let {
             val storageManager = FileDataStorageManager(getUser().get(), contentResolver)
             this.storageManager = storageManager
-            this.capabilities = CapabilityUtils.getCapability(it, activity)
         }
     }
 
