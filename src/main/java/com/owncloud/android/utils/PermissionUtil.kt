@@ -38,6 +38,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.owncloud.android.R
 import com.owncloud.android.utils.theme.ThemeButtonUtils
+import com.owncloud.android.utils.theme.ThemeColorUtils
 
 object PermissionUtil {
     const val PERMISSIONS_EXTERNAL_STORAGE = 1
@@ -105,8 +106,8 @@ object PermissionUtil {
      * @param activity The target activity.
      */
     @JvmStatic
-    fun requestExternalStoragePermission(activity: Activity) = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> requestManageFilesPermission(activity)
+    fun requestExternalStoragePermission(activity: Activity, themeColorUtils: ThemeColorUtils) = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> requestManageFilesPermission(activity, themeColorUtils)
         else -> {
             ActivityCompat.requestPermissions(
                 activity, arrayOf(getExternalStoragePermission()),
@@ -116,7 +117,7 @@ object PermissionUtil {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun requestManageFilesPermission(activity: Activity) {
+    private fun requestManageFilesPermission(activity: Activity, themeColorUtils: ThemeColorUtils) {
         val alertDialog = AlertDialog.Builder(activity, R.style.Theme_ownCloud_Dialog)
             .setTitle(R.string.file_management_permission)
             .setMessage(
@@ -137,7 +138,7 @@ object PermissionUtil {
             .create()
 
         alertDialog.show()
-        ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_POSITIVE))
+        ThemeButtonUtils.themeBorderlessButton(themeColorUtils, alertDialog.getButton(AlertDialog.BUTTON_POSITIVE))
     }
 
     /**

@@ -68,7 +68,6 @@ import com.owncloud.android.ui.dialog.parcel.SyncedFolderParcelable;
 import com.owncloud.android.utils.PermissionUtil;
 import com.owncloud.android.utils.SyncedFolderUtils;
 import com.owncloud.android.utils.theme.ThemeButtonUtils;
-import com.owncloud.android.utils.theme.ThemeUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -159,7 +158,7 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
         // TODO: The content loading should be done asynchronously
         setupContent();
 
-        if (ThemeUtils.themingEnabled(this)) {
+        if (themeUtils.themingEnabled(this)) {
             setTheme(R.style.FallbackThemingTheme);
         }
 
@@ -202,7 +201,8 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
             .setMessage(getString(R.string.power_save_check_dialog_message))
             .show();
 
-        ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_POSITIVE));
+        ThemeButtonUtils.themeBorderlessButton(themeColorUtils,
+                                               alertDialog.getButton(AlertDialog.BUTTON_POSITIVE));
     }
 
     /**
@@ -211,10 +211,18 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
     private void setupContent() {
         final int gridWidth = getResources().getInteger(R.integer.media_grid_width);
         boolean lightVersion = getResources().getBoolean(R.bool.syncedFolder_light);
-        adapter = new SyncedFolderAdapter(this, clock, gridWidth, this, lightVersion);
+        adapter = new SyncedFolderAdapter(this,
+                                          clock,
+                                          gridWidth,
+                                          this,
+                                          lightVersion,
+                                          themeColorUtils,
+                                          themeDrawableUtils);
         syncedFolderProvider = new SyncedFolderProvider(getContentResolver(), preferences, clock);
         binding.emptyList.emptyListIcon.setImageResource(R.drawable.nav_synced_folders);
-        ThemeButtonUtils.colorPrimaryButton(binding.emptyList.emptyListViewAction, this);
+        ThemeButtonUtils.colorPrimaryButton(binding.emptyList.emptyListViewAction,
+                                            this,
+                                            themeColorUtils);
 
         final GridLayoutManager lm = new GridLayoutManager(this, gridWidth);
         adapter.setLayoutManager(lm);
@@ -245,9 +253,17 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
         }
         showLoadingContent();
         final List<MediaFolder> mediaFolders = MediaProvider.getImageFolders(getContentResolver(),
-                perFolderMediaItemLimit, this, false);
-        mediaFolders.addAll(MediaProvider.getVideoFolders(getContentResolver(), perFolderMediaItemLimit,
-                this, false));
+                                                                             perFolderMediaItemLimit,
+                                                                             this,
+                                                                             false,
+                                                                             themeColorUtils,
+                                                                             themeSnackbarUtils);
+        mediaFolders.addAll(MediaProvider.getVideoFolders(getContentResolver(),
+                                                          perFolderMediaItemLimit,
+                                                          this,
+                                                          false,
+                                                          themeColorUtils,
+                                                          themeSnackbarUtils));
 
         List<SyncedFolder> syncedFolderArrayList = syncedFolderProvider.getSyncedFolders();
         List<SyncedFolder> currentAccountSyncedFoldersList = new ArrayList<>();
@@ -806,7 +822,8 @@ public class SyncedFoldersActivity extends FileActivity implements SyncedFolderA
 
             if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
                 AlertDialog alertDialog = alertDialogBuilder.show();
-                ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_POSITIVE),
+                ThemeButtonUtils.themeBorderlessButton(themeColorUtils,
+                                                       alertDialog.getButton(AlertDialog.BUTTON_POSITIVE),
                                                        alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL));
             }
         }

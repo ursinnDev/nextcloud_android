@@ -121,8 +121,6 @@ import com.owncloud.android.utils.PermissionUtil;
 import com.owncloud.android.utils.PushUtils;
 import com.owncloud.android.utils.StringUtils;
 import com.owncloud.android.utils.theme.ThemeButtonUtils;
-import com.owncloud.android.utils.theme.ThemeSnackbarUtils;
-import com.owncloud.android.utils.theme.ThemeToolbarUtils;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -310,7 +308,8 @@ public class FileDisplayActivity extends FileActivity
                     .create();
 
                 alertDialog.show();
-                ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_POSITIVE));
+                ThemeButtonUtils.themeBorderlessButton(themeColorUtils,
+                                                       alertDialog.getButton(AlertDialog.BUTTON_POSITIVE));
             } catch (WindowManager.BadTokenException e) {
                 Log_OC.e(TAG, "Error showing wrong storage info, so skipping it: " + e.getMessage());
             }
@@ -330,12 +329,13 @@ public class FileDisplayActivity extends FileActivity
                 Snackbar snackbar = Snackbar.make(binding.rootLayout,
                                                   R.string.permission_storage_access,
                                                   Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.common_ok, v -> PermissionUtil.requestExternalStoragePermission(this));
-                ThemeSnackbarUtils.colorSnackbar(this, snackbar);
+                    .setAction(R.string.common_ok,
+                               v -> PermissionUtil.requestExternalStoragePermission(this, themeColorUtils));
+                themeSnackbarUtils.colorSnackbar(this, snackbar);
                 snackbar.show();
             } else {
                 // No explanation needed, request the permission.
-                PermissionUtil.requestExternalStoragePermission(this);
+                PermissionUtil.requestExternalStoragePermission(this, themeColorUtils);
             }
         }
 
@@ -774,7 +774,7 @@ public class FileDisplayActivity extends FileActivity
             searchView.setIconified(false);
         });
 
-        ThemeToolbarUtils.themeSearchView(searchView, this);
+        themeToolbarUtils.themeSearchView(searchView, this);
 
         // populate list of menu items to show/hide when drawer is opened/closed
         mDrawerMenuItemstoShowHideList = new ArrayList<>(1);

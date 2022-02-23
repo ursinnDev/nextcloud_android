@@ -32,6 +32,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.owncloud.android.MainApp;
 import com.owncloud.android.R;
 import com.owncloud.android.utils.PermissionUtil;
+import com.owncloud.android.utils.theme.ThemeColorUtils;
 import com.owncloud.android.utils.theme.ThemeSnackbarUtils;
 
 import java.io.File;
@@ -71,10 +72,14 @@ public final class MediaProvider {
      * @param itemLimit       the number of media items (usually images) to be returned per media folder.
      * @return list with media folders
      */
-    public static List<MediaFolder> getImageFolders(ContentResolver contentResolver, int itemLimit,
-                                                    @Nullable final Activity activity, boolean getWithoutActivity) {
+    public static List<MediaFolder> getImageFolders(ContentResolver contentResolver,
+                                                    int itemLimit,
+                                                    @Nullable final Activity activity,
+                                                    boolean getWithoutActivity,
+                                                    ThemeColorUtils themeColorUtils,
+                                                    ThemeSnackbarUtils themeSnackbarUtils) {
         // check permissions
-        checkPermissions(activity);
+        checkPermissions(activity, themeColorUtils, themeSnackbarUtils);
 
         // query media/image folders
         Cursor cursorFolders = null;
@@ -171,7 +176,9 @@ public final class MediaProvider {
         return filePath != null && filePath.lastIndexOf('/') > 0 && new File(filePath).exists();
     }
 
-    private static void checkPermissions(@Nullable Activity activity) {
+    private static void checkPermissions(@Nullable Activity activity,
+                                         ThemeColorUtils themeColorUtils,
+                                         ThemeSnackbarUtils themeSnackbarUtils) {
         if (activity != null &&
             !PermissionUtil.checkExternalStoragePermission(activity.getApplicationContext())) {
             // Check if we should show an explanation
@@ -180,22 +187,27 @@ public final class MediaProvider {
                 // Show explanation to the user and then request permission
                 Snackbar snackbar = Snackbar.make(activity.findViewById(R.id.ListLayout),
                                                   R.string.permission_storage_access, Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.common_ok, v -> PermissionUtil.requestExternalStoragePermission(activity));
+                    .setAction(R.string.common_ok,
+                               v -> PermissionUtil.requestExternalStoragePermission(activity, themeColorUtils));
 
-                ThemeSnackbarUtils.colorSnackbar(activity.getApplicationContext(), snackbar);
+                themeSnackbarUtils.colorSnackbar(activity.getApplicationContext(), snackbar);
 
                 snackbar.show();
             } else {
                 // No explanation needed, request the permission.
-                PermissionUtil.requestExternalStoragePermission(activity);
+                PermissionUtil.requestExternalStoragePermission(activity, themeColorUtils);
             }
         }
     }
 
-    public static List<MediaFolder> getVideoFolders(ContentResolver contentResolver, int itemLimit,
-                                                    @Nullable final Activity activity, boolean getWithoutActivity) {
+    public static List<MediaFolder> getVideoFolders(ContentResolver contentResolver,
+                                                    int itemLimit,
+                                                    @Nullable final Activity activity,
+                                                    boolean getWithoutActivity,
+                                                    ThemeColorUtils themeColorUtils,
+                                                    ThemeSnackbarUtils themeSnackbarUtils) {
         // check permissions
-        checkPermissions(activity);
+        checkPermissions(activity, themeColorUtils, themeSnackbarUtils);
 
         // query media/image folders
         Cursor cursorFolders = null;
