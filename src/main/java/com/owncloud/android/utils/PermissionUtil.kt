@@ -40,7 +40,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.nextcloud.client.preferences.AppPreferences
 import com.nextcloud.client.preferences.AppPreferencesImpl
 import com.owncloud.android.R
-import com.owncloud.android.utils.theme.ThemeButtonUtils
 import com.owncloud.android.utils.theme.ThemeSnackbarUtils
 
 object PermissionUtil {
@@ -82,14 +81,17 @@ object PermissionUtil {
     /**
      * Determine whether the app has been granted external storage permissions depending on SDK.
      *
-     * For sdk >= 30 we use the storage manager special permissin
+     * For sdk >= 30 we use the storage manager special permission for full access, or READ_EXTERNAL_STORAGE for limited access
      * Under sdk 30 we use WRITE_EXTERNAL_STORAGE
      *
      * @return `true` if app has the permission, or `false` if not.
      */
     @JvmStatic
     fun checkExternalStoragePermission(context: Context): Boolean = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager()
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager() || checkSelfPermission(
+            context,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
         else -> checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 
@@ -108,25 +110,25 @@ object PermissionUtil {
     fun requestExternalStoragePermission(activity: Activity, force: Boolean = false) {
         if (!checkExternalStoragePermission(activity)) {
             when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> requestManageFilesPermission(activity, force)
-                else -> requestWriteExternalStoragePermission(activity)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> showPermissionChoiceDialog(activity, force)
+                else -> requestStoragePermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
     }
 
     /**
-     * For sdk < 30: request WRITE_EXTERNAL_STORAGE
+     * Request a storage permission
      */
-    private fun requestWriteExternalStoragePermission(activity: Activity) {
+    private fun requestStoragePermission(activity: Activity, permission: String) {
         fun doRequest() {
             ActivityCompat.requestPermissions(
-                activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                activity, arrayOf(permission),
                 PERMISSIONS_EXTERNAL_STORAGE
             )
         }
 
         // Check if we should show an explanation
-        if (shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+        if (shouldShowRequestPermissionRationale(activity, permission)) {
             // Show explanation to the user and then request permission
             Snackbar
                 .make(
@@ -148,42 +150,40 @@ object PermissionUtil {
     }
 
     /**
-     * For sdk < 30: request MANAGE_EXTERNAL_STORAGE through system preferences
+     * sdk >= 30: Choice between All Files access or read_external_storage
      */
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun requestManageFilesPermission(activity: Activity, force: Boolean) {
-
+    private fun showPermissionChoiceDialog(activity: Activity, force: Boolean) {
+        // TODO better dialog, externalize strings... this is a simple dialog just for behaviour testing
         val preferences: AppPreferences = AppPreferencesImpl.fromContext(activity)
 
-        if (!preferences.isStoragePermissionRequested || force) {
-
-            val alertDialog = AlertDialog.Builder(activity, R.style.Theme_ownCloud_Dialog)
-                .setTitle(R.string.file_management_permission)
-                .setMessage(
-                    String.format(
-                        activity.getString(R.string.file_management_permission_optional_text),
-                        activity.getString(R.string.app_name)
-                    )
+        AlertDialog.Builder(activity, R.style.Theme_ownCloud_Dialog)
+            .setTitle(R.string.file_management_permission)
+            .setMessage(
+                String.format(
+                    activity.getString(R.string.file_management_permission_optional_text),
+                    activity.getString(R.string.app_name)
                 )
-                .setPositiveButton(R.string.common_ok) { dialog, _ ->
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-                        data = Uri.parse("package:${activity.applicationContext.packageName}")
-                    }
-                    activity.startActivityForResult(intent, REQUEST_CODE_MANAGE_ALL_FILES)
-                    preferences.isStoragePermissionRequested = true
-                    dialog.dismiss()
+            )
+            .setPositiveButton("Full access") { dialog, _ ->
+                val intent = Intent().apply {
+                    action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+                    data = Uri.parse("package:${activity.applicationContext.packageName}")
                 }
-                .setNegativeButton(R.string.common_cancel) { dialog, _ ->
-                    preferences.isStoragePermissionRequested = true
-                    dialog.dismiss()
-                }
-                .create()
-
-            alertDialog.show()
-            ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_POSITIVE))
-            ThemeButtonUtils.themeBorderlessButton(alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE))
-        }
+                activity.startActivityForResult(intent, REQUEST_CODE_MANAGE_ALL_FILES)
+                preferences.isStoragePermissionRequested = true
+                dialog.dismiss()
+            }
+            .setNeutralButton("Media only") { dialog, _ ->
+                preferences.isStoragePermissionRequested = true
+                requestStoragePermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.common_cancel) { dialog, _ ->
+                preferences.isStoragePermissionRequested = true
+                dialog.dismiss()
+            }
+            .show()
     }
 
     /**
